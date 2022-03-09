@@ -1,0 +1,806 @@
+---
+title: "Predicting Housing Prices In Metropolitan Areas of India"
+author: "Nihar Madkaiker"
+output: pdf_document
+toc: true
+---
+
+\newpage
+
+#Executive Summary
+
+In this project we run a linear regression model on a data set to understand the working of the housing market in metropolitan cities in india and predict prices. I first identified the inter-correlated factors and subsequently created models by combining multiple factors. I improved the Rsquared value as much as possible, and obtained the RMSE value by running the model on a validation set. 
+
+\newpage
+
+# Introduction
+
+This report is a part of the Choose your own project in the course, Harvard X: PH125.9x Data Science: Capstone.
+
+In this project I have tried to develop a model to predict the housing prices in metropolitan areas of India. I have looked at the cities of Bangalore, Chennai, Delhi, Hyderabad, Kolkata and Mumbai in India. In the analysis I have tried to evaluate how the prices are affected by various parameters such as, area, no. of rooms, amenities, location, state etc. The factors for consideration have been evolved through the preliminary analysis in the project.
+
+The data set used for the analysis is obtained from Kaggle, and is authored by Ruchi Bhatia. The data set can be downloaded from here; <https://www.kaggle.com/ruchi798/housing-prices-in-metropolitan-areas-of-india>
+
+## The Housing Market in India
+
+The housing market sees a clear divide in India, among rural and urban settings, with the Metropolitan cities being among the top markets. India has 6 prominent metropolitan areas Bangalore, Chennai, Delhi, Hyderabad, Kolkata and Mumbai. Each of the cities has its own dynamics. The price of housing in the cities see variation from city to city, which are driven by multiple factors.
+
+One of the factors for consideration is the cities itself. The cities due to their economic activities, business and job opportunities have varying prices. The other factors that affect the housing prices are the area within the city, this often stems from access to schools, hospitals, office space etc.
+
+The floor space area of the property is anyway a direct consideration for the property.
+
+The other amenities often in consideration in the Indian housing market are, access to gymnasium, maintenance staff, swimming pools, open spaces/ garden area etc.
+
+The level of transaction also comes into consideration, if the house has changed hands/ is a resale property the housing price would change.
+
+Basis all of these factors the housing prize would be determined.
+
+## The data set
+
+The data set in consideration is a combination of multiple CSV files for each of the 6 cities. The data sets have columns with the price, area, no. of rooms, amenities, location etc. The data set would be imported as a individual csv files. The CSV files would then be combined and cummulatively addressed. The individual data sets are missing the city id, which would be added in the data preparation stage.
+
+The data sets are stored on the project repository on git hub. - <https://github.com/niharonline/Housing-Prices_CYOP_Nihar>
+
+The individual file links are available in the data preparation section of the report.
+
+## The approach
+
+### Methodology 1 : Linear Regression
+
+The methodology would be to run linear regression. We will first identify correlation among all the different factors. Based on which factors and coefficients will be identified. We will then create an equation to predict the pricing and run the equation on the data to cross validate and then compare with the validation set.
+
+The first step would be to prepare the data, combining the multiple data set. Since the price is usually a multiple of area, the factor in consideration would the price per unit area. Hence a variable would would be added, PPA (price per area). This would be our dependent variable for which we would conduct the analysis and this would be predicted. We will add a column to our data set, and the PPA would be calculated by dividing the Price by area.
+
+The data set would be first divided into a training set and test set (validation set). The validation set would be a hold out set and would be tested only as the last step of the project.
+
+We would then conduct exploratory analysis to see broad trends in the data at hand, based on which will decide what factors to add to our model.
+
+We will first take the naive approach, and add factors onto the model one factor at a time, such that the RMSE continues to approach. We will add the further factor based on inferences drawn from looking at correlation between the factors.
+
+We will try a regularization / ML approach by varying parameters, to arrive at the best RMSE.
+
+The final model will be then tested on the validation data set that has been held out till the end.
+
+#Data Ingestion and Data Preparation
+
+## Ingestion
+
+We will import the data from the git hub repo, using the individual links for the various data sets.
+
+```{r loading libraries}
+
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+
+install.packages("naniar", repos="http://cran.us.r-project.org")
+install.packages("corrplot", repos="http://cran.us.r-project.org")
+
+library(tidyverse)
+library(caret)
+library(data.table)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(naniar)
+library(corrplot)
+
+```
+
+1.  Bangalore
+
+The data for Bangalore is imported and saved in dataframe named Bangalore. The link for the file is, <https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Bangalore.csv>
+
+```{r Importing Bangalore data set}
+##Importing Bangalore Data set
+
+urlbangalore = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Bangalore.csv"
+Bangalore<-read_csv(url(urlbangalore))
+
+
+```
+
+2.  Chennai
+
+The data for Chennai is imported and saved in dataframe named Chennai. The link for the file is, [https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Chennai.csv](https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Bangalore.csv){.uri}
+
+```{r Importing Chennai data set}
+##Importing Chennai Data set
+
+urlchennai = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Chennai.csv"
+Chennai<-read_csv(url(urlchennai))
+
+
+```
+
+3.  Importing for other cities, Similarly importing the data set for other cities
+
+```{r Other cities}
+## similarly importing the data set for other cities
+urldelhi = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Delhi.csv"
+
+urlhyderabad = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Hyderabad.csv"
+
+urlkolkata = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Kolkata.csv"
+
+urlmumbai = "https://raw.githubusercontent.com/niharonline/Housing-Prices_CYOP_Nihar/main/Mumbai.csv"
+
+Delhi<-read_csv(url(urldelhi))
+Hyderabad<-read_csv(url(urlhyderabad))
+Kolkata<-read_csv(url(urlkolkata))
+Mumbai<-read_csv(url(urlmumbai))
+
+```
+
+### Adding City Column
+
+We now have 6 data frames with each for each of the factors. we will first add the city variable to each of the data sets.
+
+```{r adding cities}
+#adding respective cities to all the data sets.
+# we will create a column city which will mention the city for the respective entry.
+
+Bangalore$city <- "Bangalore"
+Chennai$city <- "Chennai"
+Delhi$city <- "Delhi"
+Hyderabad$city <- "Hyderabad"
+Kolkata$city <- "Kolkata"
+Mumbai$city <- "Mumbai"
+
+
+```
+
+### Combining the data sets
+
+We now have 6 different data sets which we have to combine in one single data set, which will be the parent data set for running any form of analysis.
+
+```{r combining data sets}
+
+#combining the six data sets.
+
+Housing_data <- rbind(Bangalore, Chennai, Delhi, Hyderabad, Kolkata, Mumbai)
+head(Housing_data)
+
+```
+
+This gives us a data set with all the city data combined in one data frame with 32963 observations across the 41 variables. We also note that many factors have a max value of 9, the value actually goes from 0 to 1 for these, value 9 is added in case of N/A or missing entries. 
+
+
+##Data Preparation
+
+As observed above, a large number of missing entries are present, We will create a parallel data set with the value 9 replaced with N/A and the N/A entries will be ommitted we will call this data set as clean. (this data set is extremely limited and hence will be used only for one set of analysis, the other analysis will proceed with the larger data set). The data set might have a large number of outliers as well. There are chances that the data observations are also not in the right type.
+
+### Identifying invalid entries
+
+```{r replacing 9 with NA}
+
+## here we replace the entries with value 9 with N/A
+
+Housing_data <- Housing_data %>% replace_with_na_all(condition = ~.x == 9)
+summary(Housing_data)
+str(Housing_data)
+colnames(Housing_data)[4] <- "Bedrooms"
+```
+
+We see that there are 22870 entries of NA in the amenities factors. 
+
+We can also see that the data has most columns in numeric format, but are infact categorical variable.
+
+We will convert the data to categorical variables. All variables except Area, Price, and Location are categorical variables.
+
+```{r converting numeric columns to categorical variables}
+
+## seperating column names in a data frame
+column_all <- colnames(Housing_data) 
+column_all
+
+## only retaining columns with categorical variables.
+column_factors <- column_all[-c(1,2,3)]
+
+
+## transforming columns to categorical variables.
+Housing_data[,column_factors] <- lapply(Housing_data[,column_factors] , factor)
+
+str(Housing_data) 
+```
+
+
+### Adding the PPA variable
+
+We will now add the price per unit area (PPA) variable to our data set.
+
+```{r adding the PPA variabel}
+
+##to add the ppa variable we use the cbind function
+
+Housing_data <- cbind(Housing_data, PPA = Housing_data$Price/Housing_data$Area)
+
+
+```
+
+We now have a new variable, PPA in our data set. Our objective would be to predict the PPA for the property in question.
+
+Let us visualize the variable PPA, to get a better sense of the data at hand.
+
+```{r Plotting the PPA values}
+## Plotting the PPA values
+
+ggplot(Housing_data, aes(x=PPA)) + geom_histogram(bins=100, aes(y=..density..), colour="black", fill="white")+ geom_density(alpha=.2, fill="#FF6666")
+
+
+```
+
+We can see that the PPA values are extremely skewed.
+
+we will therefore have to transform the data to get a better analysis.
+
+### Log transforming the data
+
+We will use a log transform on our data sets and get a better looking distribution.
+
+```{r log transform}
+
+##running a log transform on the data set.
+
+Housing_data <- cbind(Housing_data, log_PPA = log(Housing_data$PPA))
+
+
+```
+
+Now we can plot the new data set,
+
+```{r Plotting the Log PPA values}
+## Plotting the log PPA values
+
+ggplot(Housing_data, aes(x=log_PPA)) + geom_histogram(bins=100, aes(y=..density..), colour="black", fill="white")+ geom_density(alpha=.2, fill="#FF6666")
+
+
+```
+
+We observe that the log transformed data is normally distributed and hence a better variable to work with.
+
+## Cleaning the data
+
+### Identifying and Removing Outliers
+
+We will first plot the target variable i.e. Log PPA in a box plot and look at the outliers. 
+
+
+```{r to identify outliers}
+## boxplot of the PPA values in the housing_data set to identify outliers
+boxplot(Housing_data$log_PPA)
+
+```
+
+We can see from the plot the long trail of outliers.
+
+We will remove these outliers by comparing the zscores.
+
+```{r calculating the z scores of the outliers}
+##we will add a column with the z_scores of the log_PPA values
+
+Housing_data <- cbind(Housing_data, z_scores = (Housing_data$log_PPA - mean(Housing_data$log_PPA))/sd(Housing_data$PPA))
+
+## we now remove the the z_scores of more than 3 standard deviations
+Housing_data <-  Housing_data[!(abs(Housing_data$z_scores) > 3), ]
+
+```
+
+We now have a data set with the outliers removed, we can plot the data in a box plot and on a normal distribution and see how the data looks. 
+
+
+```{r Ploting the data cleaned of outliers}
+
+## plot of the data without outliers
+
+## normal distribution plot 
+ggplot(Housing_data, aes(x=log_PPA)) + geom_histogram(bins=100, aes(y=..density..), colour="black", fill="white")+ geom_density(alpha=.2, fill="#FF6666")
+
+
+##box plot
+
+boxplot(Housing_data$log_PPA)
+
+```
+
+We can see that the data distribution looks much better now. The boxplot shows reduced outliers and the trails are reduced. We have rid the data set of the outliers we still have the N/A entries to deal with. 
+### Removing the NA entries 
+
+```{r removing NA entries to create a clean set}
+
+## we use the below code to eliminate the NA.
+
+Housing_data_clean <- na.omit(Housing_data)
+
+```
+
+We can see that after eliminating all rows with NA, we have only 10093 observations left in the clean data set. Removing these entries will make our data set extremely limited. Hence this data set will be used only for limited analysis. (for the regression analysis mainly).
+
+```{r removing NA from the unclean set, include=FALSE}
+
+Housing_data <- Housing_data %>% drop_na('Bedrooms')
+
+```
+
+We now have two data sets, Housing_data and Housing_data_clean as two primary data sets. Which are ready to be partitioned and analysed. 
+
+
+## Partitioning the data
+
+We now partition the data into the training set and the hold out set. They are named, edx and validation for clarity (and continuity of naming convention used previously).
+
+#### Partitioning the whole data 
+
+```{r data partitioning}
+
+##data partition
+
+set.seed(1, sample.kind="Rounding")
+test_index <- createDataPartition(y = Housing_data$log_PPA, times = 1, p = 0.1, list = FALSE)
+edx <- Housing_data[-test_index,]
+temp <- Housing_data[test_index,]
+
+# ensuring that the city and locations are covered in the validation set;
+validation <- temp %>% semi_join(edx, by = "city") %>% semi_join(edx, by = "Location")
+
+# Add rows removed from validation set back into edx set
+removed <- anti_join(temp, validation)
+edx <- rbind(edx, removed)
+
+```
+
+We now have two data sets, edx, and validation. The edx data set would be the here on which will be used for analysis and cross validation. The validation set will be used only at the end.
+
+
+#Exploratory Analysis and Summary statistics
+
+Looking at some of the summary statistics and the data set composition to get an understanding of the data set at hand.
+
+```{r Exploratory Analysis and summary statistics}
+
+##exploratory analysis of the data at hand. 
+
+head(edx)
+str(edx)
+summary(edx)
+
+
+```
+
+We have a data frame with 29394 observations across 43 variables, the variable of interest here is log_PPA for us.
+
+we will first see how price varies by city.
+
+### 1. Price Variation by city
+
+As shown in various industry reports and new reports there is a strong price variation, among the cities, this can be easily identified by looking at a plot of the mean price per unit area across the cities.
+
+```{r price variation by city}
+
+## plot of the price distribution by city
+
+city_sum <- edx %>% group_by(city) %>% summarize(PPA = mean(PPA))
+city_sum <- city_sum[order(-city_sum$PPA),]
+
+barplot(city_sum$PPA, names.arg=city_sum$city,  xlab="Cities",ylab="Average price per unit area", col="light blue", main="Price Variation by City",border="black")
+
+
+```
+
+We can clearly see that city wise there is a strong price variation. Hence city would be an important factor in consideration for our analysis. 
+
+
+#Linear Regression Analysis
+
+Note: for this part we are only going to use the Housing_data_clean data set. 
+
+We can see that there are categorical variables, such as city, number of bedrooms which have multiple values (names of cities, and number of bedrooms) within one column. We would have to seperate this out into multiple columns. 
+
+We will have to create a seperate column for the cities, with each column just mentioning, 0 or 1, 0 if it doesnt belong to the city of the respective column, and 1 if it belongs to the city for that column.
+
+This form of representation it called a contrast matrix. 
+
+##Creating Contrast matrix
+
+We will create a contrast matrix for the cities and the number of bedrooms.
+
+Normally, a categorical variable that has n levels will be converted into n-1 variables,each with two levels 0 and 1. These n-1 new variables contain the same information rather than the single variable. This reformatting creates a table called contrast matrix.
+
+```{r creating city contrast matrix}
+
+##creating city contrast matrix
+
+Contrast_matrix_city <- model.matrix(~city, data = Housing_data_clean)
+
+##adding the contrast matrix to the data set
+
+Housing_data_clean <- cbind(Housing_data_clean, Contrast_matrix_city[,-1])
+
+```
+
+Similarly creating a contrast matrix for the number of bedrooms.
+
+```{r creating a bedroom contrast matrix}
+##creating bedroom contrast matrix
+
+Contrast_matrix_bedroom <- model.matrix(~Bedrooms, data = Housing_data_clean)
+
+##adding the contrast matrix to the data set
+
+Housing_data_clean <- cbind(Housing_data_clean, Contrast_matrix_bedroom[,-1])
+```
+
+## Exploratory Analysis
+
+We will first look at correlation amongst all the different variables present, after which we would modify the data set further to arrive at a model.
+
+We first create a data frame with just the variables of relevance. 
+
+```{r variable set}
+##creating the variable set data frame
+
+column_all <- colnames(Housing_data_clean)
+column_all
+```
+
+
+Removing the unncessary columns: 
+
+
+```{r variable set 1}
+##We dont need the columns with price, area, location, city, ppa and z scores, there are no 7 bedroom homes hence bedrooms7 is also removed. 
+
+column_variables <- column_all[-c(1,2,3,4,41,42,44,55)]
+column_variables
+
+##we now create the variable set
+Variables_set <- Housing_data_clean[,column_variables]
+
+## transforming the variable set to integer.
+Variables_set[] <- lapply(Variables_set,as.integer)
+
+```
+
+We now arrive at the correlation amongst all the variables,
+
+```{r variables correlation}
+
+##calculating the correlation.
+
+Variables_set.cor <- cor(Variables_set)
+
+##creating a heatmap of the data
+
+palette = colorRampPalette(c("green", "white", "red")) (20)
+
+heatmap(x = Variables_set.cor, col = palette, symm = TRUE)
+```
+We can see that there are some factors that are strongly intercorrelated and hence can be grouped together. 
+
+There are largely 2 types, 
+
+A. Furniture , which includes, Bed, microwave, Sofa, Tv, dinning table, gas connection, refrigerator, wardrobe, wifi and washing machine.
+
+B. Features, which includes, golfcourse, cafeteria, atm, shopping mall, hospital, school, lift, powerbackup, intercom, sports facility, vastu, staffroom, rain water harvesting, car park, security, multipurpose room, indoor games, landscaped gardens, jogging tack, childrens area, clubhosue, gym, and swimming pool.
+
+We will group this area into combined columns. and replace all these variables by just 2 columns, 
+
+
+```{r adding furniture column}
+
+## if the sum of individual furniture is 9 (since absence is marked by integer 1) or more, we will place 1 in the column, else it will be zero.
+Variables_set <- cbind(Variables_set, Furniture_sum = Variables_set$BED + Variables_set$Microwave +Variables_set$TV + Variables_set$DiningTable + Variables_set$Sofa + Variables_set$WashingMachine + Variables_set$Gasconnection + Variables_set$Wardrobe + Variables_set$Refrigerator + Variables_set$Wifi)
+
+
+##replacing furniture with a categorical value
+
+Variables_set$furniture <- ifelse(Variables_set$Furniture_sum > 10, 1, 0)
+
+```
+
+adding the feature column
+
+```{r adding feature column}
+
+## if the sum of individual furniture is 9 (since absence is marked by integer 1) or more, we will place 1 in the column, else it will be zero.
+Variables_set <- cbind(Variables_set, Feature_sum = Variables_set$GolfCourse+ Variables_set$Cafeteria + Variables_set$ATM + Variables_set$ShoppingMall + Variables_set$Hospital + Variables_set$School + Variables_set$LiftAvailable + Variables_set$PowerBackup + Variables_set$Intercom + Variables_set$SportsFacility + Variables_set$VaastuCompliant + Variables_set$StaffQuarter + Variables_set$RainWaterHarvesting + Variables_set$CarParking + Variables_set$`24X7Security`+ Variables_set$MultipurposeRoom + Variables_set$IndoorGames + Variables_set$LandscapedGardens + Variables_set$JoggingTrack + Variables_set$`Children'splayarea`+Variables_set$ClubHouse + Variables_set$Gymnasium + Variables_set$SwimmingPool)
+
+
+##replacing furniture with a categorical value
+
+Variables_set$feature <- ifelse(Variables_set$Feature_sum > 25 , 1, 0)
+
+```
+
+we will now run a correlation check again with the limited number of factors. 
+
+```{r correlation check 2}
+## creating a variable set with limited variables
+
+lim_column <- c("Resale", "feature", "furniture", "log_PPA", "cityChennai", "cityDelhi", "cityHyderabad", "cityKolkata", "cityMumbai", "Bedrooms2", "Bedrooms3", "Bedrooms4", "Bedrooms5", "Bedrooms6", "Bedrooms8")
+
+new_set <- as.data.frame(Variables_set[,lim_column])
+
+
+```
+
+
+```{r correlation check 3}
+
+##checking the correlation in the limited set
+
+new_set.cor <- cor(new_set)
+
+##creating a heatmap of the data
+
+palette = colorRampPalette(c("green", "white", "red")) (20)
+
+heatmap(x = new_set.cor, col = palette, symm = TRUE)
+
+```
+We can now see that there is reduced inter - correlation among factors. We can now add our two new variables, i.e. Feature and Furniture to the main set i.e. the housing_data_clean. 
+
+```{r adding the new data to housing data clea}
+
+##adding the furniture and feature column to the housing data. 
+
+Housing_data_clean <- cbind(Housing_data_clean, furniture = Variables_set$furniture)
+
+Housing_data_clean <- cbind(Housing_data_clean, feature = Variables_set$feature)
+
+Housing_data_clean$Resale <- as.numeric(Housing_data_clean$Resale)
+
+```
+
+
+
+#### Partitioning the clean data
+
+We can now partition the clean data set, similar to the partition done in the main set previously.
+
+```{r clean data partitioning}
+
+##data partition
+
+set.seed(1, sample.kind="Rounding")
+test_index_clean <- createDataPartition(y = Housing_data_clean$log_PPA, times = 1, p = 0.1, list = FALSE)
+edx_clean <- Housing_data_clean[-test_index_clean,]
+temp_clean <- Housing_data_clean[test_index_clean,]
+
+# ensuring that the city and locations are covered in the validation set;
+validation_clean <- temp_clean %>% semi_join(edx_clean, by = "city") %>% semi_join(edx_clean, by = "Location")
+
+# Add rows removed from validation set back into edx set
+removed_clean <- anti_join(temp_clean, validation_clean)
+edx_clean <- rbind(edx_clean, removed_clean)
+
+```
+We now have further more two data sets, edx_clean, and validation_clean. The edx_clean data set would be the here on which will be used for analysis and cross validation in the Linear regression appraoch. The validation_clean set will be used only at the end.
+
+
+## Linear regression models
+
+### LM: Model 1 : cities
+
+We will first create a linear regression model, only taking the cities into consideration. 
+
+```{r linear regression model 1}
+
+#writing a linear regression model with only cities
+
+model_1 <- lm(log_PPA~cityChennai+ cityDelhi+ cityHyderabad+ cityKolkata + cityMumbai, data = edx_clean)
+summary(model_1)
+
+```
+We can see that the rsquared for this model is only 27.48% which can be further improved.
+
+saving the rsquare value in a table. 
+
+```{r rsquare in table}
+
+##saving rsquare in a table
+
+Rsqr_model1 <- summary(model_1)$r.squared
+Rsqr_table <- tibble(method="Model 1: cities", R_sqr = Rsqr_model1)
+Rsqr_table
+```
+
+
+we will bring the next factor into consideration, which is number of Bedrooms. 
+
+### LM: Model 2: Cities + Bedrooms
+
+
+We will create a linear regression model, taking the cities and the number of bedrooms into consideration. 
+
+```{r linear regression model 2}
+
+#writing a linear regression model with only cities
+
+model_2 <- lm(log_PPA~cityChennai+ cityDelhi+ cityHyderabad+ cityKolkata + cityMumbai + Bedrooms2 + Bedrooms3 + Bedrooms4 + Bedrooms5 + Bedrooms6 + Bedrooms8, data = edx_clean)
+summary(model_2)
+
+```
+we can see that the R square value has improved hence we can say we are moving in the right direction. 
+
+saving the rsquare value in a table. 
+
+```{r rsquare in table 2}
+##saving rsquare in a table
+
+Rsqr_model2 <- summary(model_2)$r.squared
+Rsqr_table <- bind_rows(Rsqr_table, data_frame(method="Model 2: cities + Bedroom", R_sqr = Rsqr_model2))
+Rsqr_table
+
+```
+Further adding the next varibale of resale. 
+
+
+### LM: Model 3: Cities + Bedrooms + Resale
+
+
+We will create a linear regression model, taking the cities and the number of bedrooms and the resale position into consideration. 
+
+```{r linear regression model 3}
+
+#writing a linear regression model with only cities
+
+model_3 <- lm(log_PPA~cityChennai+ cityDelhi+ cityHyderabad+ cityKolkata + cityMumbai + Bedrooms2 + Bedrooms3 + Bedrooms4 + Bedrooms5 + Bedrooms6 + Bedrooms8 + Resale, data = edx_clean)
+summary(model_3)
+
+```
+The rsquare has improved from 37.7% to 39.1%. 
+
+```{r rsquare in table 3}
+##saving rsquare in a table
+
+Rsqr_model3 <- summary(model_3)$r.squared
+Rsqr_table <- bind_rows(Rsqr_table, data_frame(method="Model 3: cities + Bedroom + Resale", R_sqr = Rsqr_model3))
+Rsqr_table
+
+```
+### LM: Model 4: Cities + Bedrooms + Resale + Furniture
+
+
+
+We will create a linear regression model, taking the cities, the number of bedrooms, the resale position and the presence of furniture into consideration. 
+
+```{r linear regression model 4}
+
+#writing a linear regression model with only cities
+
+model_4 <- lm(log_PPA~cityChennai+ cityDelhi+ cityHyderabad+ cityKolkata + cityMumbai + Bedrooms2 + Bedrooms3 + Bedrooms4 + Bedrooms5 + Bedrooms6 + Bedrooms8 + Resale + furniture, data = edx_clean)
+summary(model_4)
+
+```
+The rsquare has improved from 39.1% to 41.4%
+
+```{r rsquare in table 4}
+##saving rsquare in a table
+
+Rsqr_model4 <- summary(model_4)$r.squared
+Rsqr_table <- bind_rows(Rsqr_table, data_frame(method="Model 4: cities, bedrooms, resale + furniture", R_sqr = Rsqr_model4))
+Rsqr_table
+
+```
+
+and finally we will add the feature factors. 
+
+
+### LM: Model 5: Cities + Bedrooms + Resale + furniture + feature
+
+
+In addition to the previously considered models we will now add the features.
+
+```{r linear regression model 5}
+
+#writing a linear regression model with only cities
+
+model_5 <- lm(log_PPA~cityChennai+ cityDelhi+ cityHyderabad+ cityKolkata + cityMumbai + Bedrooms2 + Bedrooms3 + Bedrooms4 + Bedrooms5 + Bedrooms6 + Bedrooms8 + Resale + furniture + feature, data = edx_clean)
+summary(model_5)
+
+```
+The rsquare has improved from 41.4% to 42.5%. 
+
+```{r rsquare in table 5}
+##saving rsquare in a table
+
+Rsqr_model5 <- summary(model_5)$r.squared
+Rsqr_table <- bind_rows(Rsqr_table, data_frame(method="Model 5: cities, bedroom, resale, furniture, feature", R_sqr = Rsqr_model5))
+Rsqr_table
+
+```
+
+We have a model which gives us 42.5% R squared. This is not the best value for Rsquared but is sufficient given the limitations in the data sets. 
+
+The equation for the regression model will finally look as below: 
+
+$log PPA = 0.159*cityChennai + 0.206*cityDelhi - 0.0332*cityHyderabad - 0.2221*cityKolkata + 0.657*cityMumbai + 0.101*Bedrooms2 + 0.269*Bedrooms3 + 0.542*Bedrooms4 + 0.78*Bedrooms5 + 0.2147*Bedrooms6 + 0.3729*Bedrooms8 + 0.104*Resale1 + 0.1536*furniture + 0.12069*feature $ 
+
+Running this equation through the edx_clean set for cross validation we can arrive at an RMSE. 
+
+
+```{r prediction crossvalidation}
+
+## we first predict the the value
+
+edx_clean <- cbind(edx_clean, prediction = 0.159*edx_clean$cityChennai + 0.206*edx_clean$cityDelhi - 0.0332*edx_clean$cityHyderabad - 0.2221*edx_clean$cityKolkata + 0.657*edx_clean$cityMumbai + 0.101*edx_clean$Bedrooms2 + 0.269*edx_clean$Bedrooms3 + 0.542*edx_clean$Bedrooms4 + 0.78*edx_clean$Bedrooms5 + 0.2147*edx_clean$Bedrooms6 + 0.3729*edx_clean$Bedrooms8 + 0.104*edx_clean$Resale + 0.1536*edx_clean$furniture + 0.12069*edx_clean$feature )
+
+
+
+```
+
+we can now find the RMSE
+
+```{r RMSE crossvalidation}
+
+RMSE_cv <- RMSE(edx_clean$log_PPA, edx_clean$prediction)
+
+RMSE_cv
+```
+since this is the RMSE for the log_PPA value we take an anti log to arrive at the RMSE_PPA
+
+```{r RMSE CV}
+
+exp(RMSE_cv)
+
+```
+
+The root mean squared error at the PPA level is 3431. which is Rs. 3431 per unit area. The mean Price per unit area was Rs. 9750. 
+
+## Validation 
+
+Running the RMSE check on the validation data set. 
+
+```{r prediction validation}
+
+## we first predict the the value
+
+validation_clean <- cbind(validation_clean, prediction = 0.159*validation_clean$cityChennai + 0.206*validation_clean$cityDelhi - 0.0332*validation_clean$cityHyderabad - 0.2221*validation_clean$cityKolkata + 0.657*validation_clean$cityMumbai + 0.101*validation_clean$Bedrooms2 + 0.269*validation_clean$Bedrooms3 + 0.542*validation_clean$Bedrooms4 + 0.78*validation_clean$Bedrooms5 + 0.2147*validation_clean$Bedrooms6 + 0.3729*validation_clean$Bedrooms8 + 0.104*validation_clean$Resale + 0.1536*validation_clean$furniture + 0.12069*validation_clean$feature )
+
+
+
+```
+
+we can now find the RMSE
+
+```{r RMSE validation}
+
+#################### RMSE VALIDATION ###################################
+
+RMSE_v <- RMSE(validation_clean$log_PPA, validation_clean$prediction)
+
+RMSE_v
+```
+since this is the RMSE for the log_PPA value we take an anti log to arrive at the RMSE_PPA
+
+```{r RMSE V}
+
+
+
+exp(RMSE_v)
+
+```
+
+The root mean squared error at the PPA level is 3458. which is Rs. 3458 per unit area. The mean Price per unit area was Rs. 9750. 
+
+
+#Conclusion
+
+The RMSE for the data set is calculated and shows a sizeable large error. Given the limitations in the data set, the RMSE can still be considered to be sufficiently low. 
+The data set can be improved by obtaining more data points, better weeding out of outliers and better documentation of some of the factors. Some of the factors could have been more comprehensive.
+
+
+
+# References
+
+1\] <https://www.kaggle.com/ruchi798/housing-prices-in-metropolitan-areas-of-india>
+
+2\] Git hub repo: [\<https://github.com/niharonline/Housing-Prices_CYOP_Nihar>](https://github.com/niharonline/Housing-Prices_CYOP_Nihar){.uri}
+
+3\] <https://economictimes.indiatimes.com/industry/services/property-/-cstruction/residential-real-estate-market-beats-pandemic-blues-sales-in-top-7-housing-markets-grow-71-yoy/articleshow/88641967.cms>
+
+4\] <https://www.ibef.org/industry/real-estate-india.aspx>
+
+5\] <https://www.newindianexpress.com/cities/hyderabad/2022/feb/18/hyderabad-second-most-expensive-housing-market-in-india-2420903.html>
